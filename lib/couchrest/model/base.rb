@@ -14,12 +14,13 @@ module CouchRest
       include Proxyable
       include PropertyProtection
       include Associations
+      include HasManyAssociations
       include Validations
       include Callbacks
       include Designs
       include CastedBy
       include Dirty
-      
+
 
       def self.subclasses
         @subclasses ||= []
@@ -68,13 +69,13 @@ module CouchRest
       alias :new_record? :new?
       alias :new_document? :new?
 
-      # Compare this model with another by confirming to see 
+      # Compare this model with another by confirming to see
       # if the IDs and their databases match!
       #
-      # Camparison of the database is required in case the 
+      # Camparison of the database is required in case the
       # model has been proxied or loaded elsewhere.
       #
-      # A Basic CouchRest document will only ever compare using 
+      # A Basic CouchRest document will only ever compare using
       # a Hash comparison on the attributes.
       def == other
         return false unless other.is_a?(Base)
@@ -87,6 +88,64 @@ module CouchRest
       end
       alias :eql? :==
 
+      def self.build_from_database(doc = {}, options = {}, &block)
+        src = doc[model_type_key]
+        base = src.blank? || src == model_type_value ? self : src.safe_constantize
+        return if base.blank?
+        base.new(doc, options.merge(directly_set_attributes: true), &block)
+      end
+
+      def self.exists?(id)
+        doc = database.get(id)
+        doc.present? && doc['type'] == to_s
+      end
+
+      def update_column(params = {})
+        retry_on_conflict do
+          safe_reload
+          update_attributes_without_saving(params)
+          set_unique_id if new? && respond_to?(:set_unique_id)
+          result = database.save_doc(self)
+          ret = result['ok'] == true ? self : false
+          @changed_attributes.clear if ret && @changed_attributes
+          ret
+        end
+      end
+
+      def retry_on_conflict(max_retries: 3)
+        retries ||= 0
+        yield
+      rescue CouchRest::Conflict
+        raise if (retries += 1) >= max_retries
+        retry
+      end
+
+      def purge
+        return false unless destroyed?
+        database.purge_doc(self)
+        true
+      end
+
+      def associated_changed?
+        self.class.has_many_associations.any? do |attrib|
+          send(attrib).any?(&:changed?)
+        end
+      end
+
+      def changed?
+        super || associated_changed?
+      end
+
+      def change_type(type)
+        result = database.save_doc(merge('type' => type))
+        result['ok'] || clear_changes_information
+      end
+
+      def safe_reload
+        reload
+      rescue StandardError # to protect the system against the errors, we need to rescue from random error in the lib
+        nil
+      end
     end
   end
 end
