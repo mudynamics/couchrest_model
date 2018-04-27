@@ -117,7 +117,20 @@ module CouchRest
         yield
       rescue CouchRest::Conflict
         raise if (retries += 1) >= max_retries
+        self['_id'] = set_unique_id if new? && respond_to?(:set_unique_id)
+        self['_rev'] = last_known_revision || self['_rev']
         retry
+      end
+
+      def last_known_revision
+        database
+          .changes
+          .fetch('results', [])
+          .reverse_each
+          .find { |result| result['id'] == self['_id'] }
+          .fetch('changes', [])
+          .inject(:merge)
+          .fetch('rev', nil)
       end
 
       def purge
@@ -129,6 +142,12 @@ module CouchRest
       def associated_changed?
         self.class.has_many_associations.any? do |attrib|
           send(attrib).any?(&:changed?)
+        end
+      end
+
+      def save(options = {})
+        retry_on_conflict do
+          super
         end
       end
 
