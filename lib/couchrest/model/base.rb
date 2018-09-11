@@ -107,7 +107,7 @@ module CouchRest
           set_unique_id if new? && respond_to?(:set_unique_id)
           result = database.save_doc(self)
           ret = result['ok'] == true ? self : false
-          @changed_attributes.clear if ret && @changed_attributes
+          changes_applied if ret
           ret
         end
       end

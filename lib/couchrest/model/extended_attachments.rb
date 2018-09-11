@@ -17,6 +17,7 @@ module CouchRest
       def attachments
         self['_attachments'] ||= {}
       end
+      alias :_attachments :attachments
 
       # reads the data from an attachment
       def read_attachment(attachment_name)

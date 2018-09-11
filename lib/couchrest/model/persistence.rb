@@ -13,7 +13,7 @@ module CouchRest
             set_unique_id if new? && self.respond_to?(:set_unique_id)
             result = database.save_doc(self)
             ret = (result["ok"] == true) ? self : false
-            @changed_attributes.clear if ret && @changed_attributes
+            changes_applied if ret
             ret
           end
         end
@@ -36,7 +36,7 @@ module CouchRest
           run_callbacks :save do
             result = database.save_doc(self)
             ret = result["ok"] == true
-            @changed_attributes.clear if ret && @changed_attributes
+            changes_applied if ret
             ret
           end
         end
