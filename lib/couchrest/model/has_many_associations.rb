@@ -81,7 +81,7 @@ module CouchRest
           class_eval <<-EOS, __FILE__, __LINE__ + 1
             def save_associated_#{attrib}!
               #{attrib}.all? { |a| a.update_attributes(#{options[:foreign_key]}: id) } &&
-                update_attributes(#{options[:collection_of]}: #{attrib}.map(&:id))
+                update_columns(#{options[:collection_of]}: #{attrib}.map(&:id))
             end
           EOS
         end

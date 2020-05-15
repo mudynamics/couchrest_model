@@ -21,6 +21,19 @@ module CouchRest #:nodoc:
 
         define_model_callbacks :initialize, :only => :after
         define_model_callbacks :create, :destroy, :save, :update
+
+        def run_callbacks(kind, &block)
+          return block.call if @skip_callbacks && block
+
+          super(kind, &block)
+        end
+
+        def run_without_callbacks
+          @skip_callbacks = true
+          result = yield
+          @skip_callbacks = false
+          result
+        end
       end
     end
 
