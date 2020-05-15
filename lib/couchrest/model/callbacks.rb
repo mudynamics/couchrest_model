@@ -30,9 +30,9 @@ module CouchRest #:nodoc:
 
         def run_without_callbacks
           @skip_callbacks = true
-          result = yield
+          yield
+        ensure
           @skip_callbacks = false
-          result
         end
       end
     end
