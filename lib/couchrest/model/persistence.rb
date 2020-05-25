@@ -87,6 +87,12 @@ module CouchRest
         save
       end
 
+      def update_columns(hash)
+        run_without_callbacks do
+          update_attributes(hash)
+        end
+      end
+
       # Reloads the attributes of this object from the database.
       # It doesn't override custom instance variables.
       #
